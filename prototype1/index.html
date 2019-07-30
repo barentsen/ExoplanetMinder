@@ -1,0 +1,216 @@
+<!-- First prototype for ExoplanetMinder -->
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<head>
+  <style>
+    body {
+      font: 12px sans-serif;
+      background: black;
+    }
+
+    .svg-container {
+      display: inline-block;
+      position: relative;
+      width: 99%;
+      vertical-align: top;
+      max-width:100%;
+      max-height:100%;
+    }
+    .svg-content {
+        display: inline-block;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    .bar {
+      shape-rendering: crispEdges;
+    }
+
+    .bar-text {
+      fill: #ffffff;
+      font-size: 72px;
+    }
+
+    .label-text {
+      fill: #ffffff;
+      font-size: 30px;
+    }
+
+    .year {
+      fill: #ffffff;
+      font-size: 200px;
+    }
+  </style>
+  <script src="d3.v4.min.js"></script>
+</head>
+
+<body>
+  <div id="viz" class="svg-container"></div>
+</body>
+
+<script>
+var format = d3.format(" d");
+var colors = ['#3498db', '#2ecc71', '#f1c40f', '#e74c3c']
+var sizes = [1.5, 4, 10.5]
+var labels = ["Earth-size", "Neptune-size", "Jupiter-size"]
+var solar_planets = [4, 2, 2];
+
+var svg = d3.select("#viz")
+  .append("svg")
+    .attr("preserveAspectRatio", "xMinYMin meet")
+    .attr("viewBox", "0 0 1600 900")
+    .classed("svg-content", true);
+
+
+/* Functions below determine histogram bar and label placement. */
+function rect_x(d, idx) {
+  return 200 + idx*(250);
+}
+
+function rect_y(d, idx) {
+  return 900 * (1 - (d.length + solar_planets[idx]) / 2400) - 200;
+}
+
+function label_x(d, idx) {
+  return rect_x(d, idx) + 75;
+}
+
+function label_y(d, idx) {
+  return rect_y(d, idx) - 70;
+}
+
+function rect_height(d, idx) {
+  return 900*((d.length + solar_planets[idx]) / 2400);
+}
+
+/* Takes exoplanet table and returns size histogram */
+function get_bins(data, year){
+  var filtered_data = data.filter(function(d) {
+    return d.pl_disc <= year
+  })
+
+  var histogram = d3.histogram()
+    .value(function(d) { return d.fpl_rade; })
+    .domain([0, 20])
+    .thresholds([2.0, 6.0]);
+
+  return histogram(filtered_data);
+}
+
+/* Setup the initial view. */
+function setup(year){
+
+  d3.csv("planets_to_plot.csv", function(data) {
+    var bins = get_bins(data, year);
+
+    svg.selectAll("rect")
+      .data(bins)
+      .enter()
+      .append("rect")
+        .attr("x", rect_x)
+        .attr("y", rect_y)
+        .attr("width", 150)
+        .attr("height", rect_height)
+        .attr("fill", function(d, idx) { return colors[idx]; })
+        .classed("bar", true);
+
+    svg.selectAll(".bar-text")
+      .data(bins)
+      .enter()
+      .append("text")
+        .attr("dy", ".75em")
+        .attr("x", label_x)
+        .attr("y", label_y)
+        .attr("text-anchor", "middle")
+        .text(function(bin, idx) { return bin.length + solar_planets[idx]; })
+        .classed("bar-text", true);
+        
+    svg.selectAll(".label-text")
+      .data(bins)
+      .enter()
+      .append("text")
+        .attr("dy", ".75em")
+        .attr("x", label_x)
+        .attr("y", function(bin, idx){ return label_y(bin, idx) + 200; })
+        .attr("text-anchor", "middle")
+        .text(function(bin, idx) { return labels[idx]; })
+        .classed("label-text", true);
+
+    svg.selectAll(".planet-circles")
+      .data(bins)
+      .enter()
+      .append("circle")
+        .attr("cx", label_x)
+        .attr("cy", function(bin, idx){ return label_y(bin, idx) - 4*sizes[idx] + 180; })
+        .attr("r", function(bin, idx){ return 4*sizes[idx]; })
+        .attr("fill", function(d, idx) { return colors[idx]; })
+
+    svg.selectAll(".year")
+      .data([year])
+      .enter()
+      .append("text")
+        .attr("x", function(bin, idx) { return 1200; })
+        .attr("y", function(bin, idx) { return 200; })
+        .attr("text-anchor", "middle")
+        .text(function(year) { return format(year); })
+        .classed("year", true);
+  });
+}
+
+
+function change_year(year){
+
+  d3.csv("planets_to_plot.csv", function(data) {
+    var bins = get_bins(data, year);    
+
+    svg.selectAll("rect")
+      .data(bins)
+      .transition()
+      .duration(1000)
+      .attr("x", rect_x)
+      .attr("y", rect_y)
+      .attr("width", 150)
+      .attr("height", rect_height)
+
+    svg.selectAll("text")
+      .data(bins)
+      .transition()
+      .duration(1000)
+      .attr("x", label_x)
+      .attr("y", label_y)
+      .tween("text", function(bin, idx) {
+        var that = d3.select(this),
+            i = d3.interpolateNumber(that.text(), bin.length + solar_planets[idx]);
+        return function(t) { that.text(format(i(t))); };
+      })
+
+    svg.selectAll(".year")
+       .data([year])
+       .transition()
+       .duration(1000)
+       .tween("text", function(bin) {
+          var that = d3.select(this),
+              i = d3.interpolateNumber(that.text(), year);
+          return function(t) { that.text(format(i(t))); };
+        })
+  });
+}
+
+
+var years_to_show = [1846, 1989, 1999, 2009, 2014, 2019];
+var idx = 0;
+setup(years_to_show[idx]);
+
+/*setInterval(function() {
+  next()
+}, 2000);*/
+
+function next() {
+  idx += 1;
+  change_year(years_to_show[idx % years_to_show.length]);  
+}
+
+d3.select('body').on("keypress", next)
+</script>
