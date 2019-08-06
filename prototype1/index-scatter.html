@@ -1,0 +1,390 @@
+<!-- First prototype for ExoplanetMinder -->
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<head>
+  <style>
+    body {
+      font: 12px sans-serif;
+      background: black;
+    }
+
+    .svg-container {
+      display: inline-block;
+      position: relative;
+      width: 99%;
+      vertical-align: top;
+      max-width:100%;
+      max-height:100%;
+    }
+    .svg-content {
+        display: inline-block;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    .tooltip {
+      color: white;
+    }
+
+    .label {
+      font-size: 36px;
+      fill: white;
+    }
+
+    .tick text {
+      font-size: 20px;
+      fill: white;
+    }
+
+    .tick line {
+      stroke: white;
+      stroke-width: 3px;
+      shape-rendering: crispEdges;
+    }
+
+    .xaxis path, .yaxis path {
+      stroke: white;
+      stroke-width: 3px;
+      shape-rendering: crispEdges;
+    }
+
+    .dot {
+      stroke: black;
+      stroke-opacity: 0.5;
+      fill: white;
+      fill-opacity: 0.8;
+    }
+
+    .annotation-note-title {
+      font-size: 16px;
+    }
+  </style>
+  <script src="d3.v4.min.js"></script>
+  <script src="d3-annotation.min.js"></script>  
+</head>
+
+<body>
+  <div id="viz" class="svg-container"></div>
+</body>
+
+<script>
+var margin = {top: 20, right: 30, bottom: 50, left: 120},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+color = function(d) {
+  if (d.radius > 6) {
+    return "#f1c40f"
+  } else if (d.radius > 2) {
+    return "#2ecc71"
+  } else{
+   return "#3498db" 
+  }
+ }
+
+// add the graph canvas to the body of the webpage
+var svg = d3.select("body")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+// create a clipping region 
+svg.append("defs").append("clipPath")
+    .attr("id", "clip")
+    .append("rect")
+    .attr("x", 50)
+    .attr("width", width - 50)
+    .attr("height", height);
+
+// add the tooltip area to the webpage
+var tooltip = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0);
+
+
+d3.csv("planets_to_plot.csv", function(error, data) {
+
+  data = data.filter(function(d){
+      if(isNaN(d.new_rade) || isNaN(d.new_insol) || isNaN(d.pl_orbper) || isNaN(d.fpl_smax)){
+          return false;
+      }
+      d.radius = +d.new_rade;
+      d.insolation = +d.new_insol;
+      d.period = +d.pl_orbper;
+      d.distance = +d.fpl_smax
+      return true;
+    });
+  
+    periodScale = d3.scaleLog().range([0, width]).domain([0.3, 10000])
+    periodMap = function(d) { return periodScale(d.period);}
+    periodTicks = [1, 14, 365, 10000];
+    periodLabels = ["1 day", "14 days", "365 days", "10 000 days"];
+
+    distanceScale = d3.scaleLog().range([0, width]).domain([0.01, 10])
+    distanceMap = function(d) { return distanceScale(d.distance);}
+    distanceTicks = [0.01, 0.1, 1, 10];
+    distanceLabels = ["0.01 AU", "0.1 AU", "1 AU", "10 AU"];
+
+    insolationScale = d3.scaleLog().range([0, width]).domain([10000, 0.01])
+    insolationMap = function(d) { return insolationScale(d.insolation);}
+    insolationTicks = [10000, 100, 1, 0.01];
+    insolationLabels = ["10 000x Earth", "100x", "1x", "0.01x"];
+
+    radiusScale = d3.scaleLog().range([height, 0]).domain([0.3, 33])
+    radiusMap = function(d) { return radiusScale(d.radius);}
+    radiusTicks = [1, 3.9-0.4, 11+0.8];
+    radiusLabels = ["Earth", "Neptune", "Jupiter"]
+
+    xAxis = d3.axisBottom()
+                .scale(periodScale)
+                .tickValues(periodTicks)
+                .tickFormat( function(d, idx) { return periodLabels[idx]; })
+                .tickSize(15)
+                .tickSizeOuter(0)
+                
+
+    yAxis = d3.axisLeft()
+                .scale(radiusScale)
+                .tickValues(radiusTicks)
+                .tickFormat( function(d, idx) { return radiusLabels[idx]; })
+                .tickSize(15)
+                .tickSizeOuter(0)
+                
+   // draw dots
+   svg.selectAll(".dot")
+        .data(data)
+      .enter().append("circle")
+        .attr("clip-path", "url(#clip)")
+        .attr("class", "dot")
+        .attr("r", function(d) { return 2 + d.radius; })
+        .attr("cx", periodMap)
+        .attr("cy", radiusMap)
+        .attr("visibility", "hidden")
+        .style("fill", color) 
+        .on("mouseover", function(d) {
+            tooltip.transition()
+                .duration(200)
+                .style("opacity", .9);
+            tooltip.html(d.name + "<br/> (" + d.insolation 
+            + ", " + d.radius + ")")
+                .style("left", (d3.event.pageX + 5) + "px")
+                .style("top", (d3.event.pageY - 28) + "px");
+        })
+        .on("mouseout", function(d) {
+            tooltip.transition()
+                .duration(500)
+                .style("opacity", 0);
+        });
+
+});
+
+
+function draw_y() {
+    svg.append("g").transition()
+      .attr("class", "yaxis")
+      .attr("id", "yaxis")
+      .attr("transform", "translate(-10, 0)")
+      .call(yAxis)
+
+  // Axis labels
+  svg.append("text")
+      .attr("transform", "rotate(-90)")
+      .transition()
+      .attr("y", -5)
+      .attr("x", 0)
+      .attr("dy", "1em")
+      .attr("class", "label")
+      .style("text-anchor", "end")
+      .text("Planet size"); 
+}
+
+function draw_x() {     
+      svg.append("g").transition()
+      .attr("class", "xaxis")
+      .attr("id", "xaxis")
+      .attr("transform", "translate(0, " + (height + 10) + ")")
+      .call(xAxis)
+
+    // Axis labels
+    svg.append("text")
+        .transition()
+        .attr("y", height - 5)
+        .attr("x", width)
+        .attr("class", "label")
+        .attr("id", "xlabel")
+        .style("text-anchor", "end")
+        .text("Orbital period")
+}
+
+
+function show_period() {
+  svg.selectAll("circle")
+        .transition()
+        .duration(1000)
+        .attr("cx", periodMap)
+        .attr("cy", radiusMap)
+
+  xAxis.scale(periodScale)
+      .tickValues(periodTicks)
+      .tickFormat( function(d, idx) { return periodLabels[idx]; });
+  svg.select("#xaxis").transition().call(xAxis)
+  
+  yAxis.scale(radiusScale)
+      .tickValues(radiusTicks)
+      .tickFormat( function(d, idx) { return radiusLabels[idx]; });
+  svg.select("#yaxis").transition().call(yAxis)
+
+  svg.select("#xlabel").transition().text("Orbital period")
+}
+
+
+function show_distance() {
+  svg.selectAll("circle")
+        .transition()
+        .duration(1000)
+        .attr("cx", distanceMap)
+        .attr("cy", radiusMap)
+
+  xAxis.scale(distanceScale)
+      .tickValues(distanceTicks)
+      .tickFormat( function(d, idx) { return distanceLabels[idx]; });
+  svg.select("#xaxis").transition().call(xAxis)
+  svg.select("#xlabel").transition().text("Distance from star")
+}
+
+
+function show_insolation() {
+  svg.selectAll("circle")
+        .transition()
+        .duration(1000)
+        .attr("cx", insolationMap)
+        .attr("cy", radiusMap)
+
+  xAxis.scale(insolationScale)
+      .tickValues(insolationTicks)
+      .tickFormat( function(d, idx) { return insolationLabels[idx]; });
+  svg.select("#xaxis").transition().call(xAxis)
+  svg.select("#xlabel").transition().text("Star light received")
+}
+
+
+function zoom() {
+  insTicksZoom = [100, 1, 0.01];
+  insLabelsZoom = ["100x", "1x Earth", "0.01x"];
+  insScaleZoom = d3.scaleLog().range([0, width]).domain([100, 0.01])
+  insMapZoom = function(d) { return insScaleZoom(d.insolation);}
+
+  xAxis.scale(insScaleZoom)
+      .tickValues(insTicksZoom)
+      .tickFormat( function(d, idx) { return insLabelsZoom[idx]; }); 
+  
+  radTicksZoom = [0.5, 1, 2];
+  radLabelsZoom = ["0.5x", "1x Earth", "2x"];
+  radScaleZoom = d3.scaleLog().range([height, 0]).domain([0.47, 2.])
+  radMapZoom = function(d) { return radScaleZoom(d.radius);}
+
+  yAxis.scale(radScaleZoom)
+      .tickValues(radTicksZoom)
+      .tickFormat( function(d, idx) { return radLabelsZoom[idx]; }); 
+
+  svg.select("#xaxis").transition().call(xAxis)
+  svg.select("#yaxis").transition().call(yAxis)
+
+  svg.selectAll(".dot")
+      .transition()
+      .duration(2000)
+      .attr("cx", insMapZoom)
+      .attr("cy", radMapZoom)
+
+}
+
+
+function annotate_hz() {
+  const annotations = [
+    {
+      note: {
+        label: "2017",
+        title: "TRAPPIST-1e"
+      },
+      color: ["white"],
+      x: insScaleZoom(0.6598),
+      y: radScaleZoom(0.918),
+      dy: 30,
+      dx: 30
+    },
+    {
+      note: {
+        label: "2019",
+        title: "Teegarden b"
+      },
+      color: ["white"],
+      x: insScaleZoom(1.149),
+      y: radScaleZoom(1.0213),
+      dy: 30,
+      dx: -30
+    },
+    {
+      note: {
+        label: "2016",
+        title: "Proxima Cen B"
+      },
+      color: ["white"],
+      x: insScaleZoom(0.6584),
+      y: radScaleZoom(1.0962),
+      dy: -30,
+      dx: 30
+    }
+  ]
+
+  // Add annotation to the chart
+  const makeAnnotations = d3.annotation()
+    .annotations(annotations)
+  svg.append("g")
+    .call(makeAnnotations)
+}
+
+build = 0;
+function next() {
+  if (build == 0) {
+    draw_y();
+  } else if (build == 1) {
+    draw_x()
+  } else if (build == 2) {
+    //draw_points()
+    svg.selectAll(".dot").transition().attr("visibility", "visible");
+    svg.select(".annotations").remove();
+    show_period()
+    /*
+    svg.append("g")
+      .append("circle")
+      .attr("cx", 100)
+      .attr("cy", 100)
+      .attr("r", 100)
+      .style("opacity", 0.7)
+    
+    svg.append("text")
+      .attr("x", 100)
+      .attr("y", 100)
+      .text("Hot Jupiters")
+      .style("fill", "white")
+    */
+  } else if (build == 3) {
+    show_distance()
+  } else if (build == 4) {
+    show_insolation()
+  } else if (build == 5) {
+    zoom()
+  } else if (build == 6) {
+    annotate_hz()
+    build = 1;
+  }
+  build += 1;
+}
+
+d3.select('body').on("keypress", next)
+d3.select('body').on("click", next)
+</script>
