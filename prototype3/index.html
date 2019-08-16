@@ -1,0 +1,508 @@
+<!-- First prototype for ExoplanetMinder -->
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<head>
+  <link href="https://fonts.googleapis.com/css?family=Roboto&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      font-size: 12px;
+      background: black;
+    }
+
+    .svg-container {
+      display: inline-block;
+      position: relative;
+      width: 99%;
+      vertical-align: top;
+      max-width:100%;
+      max-height:100%;
+    }
+    .svg-content {
+        display: inline-block;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    .tooltip {
+      color: white;
+    }
+
+    .label {
+      font-size: 32px;
+      fill: white;
+    }
+
+    .tick text {
+      font-size: 20px;
+      fill: white;
+    }
+
+    .tick line {
+      stroke: white;
+      stroke-width: 3px;
+      shape-rendering: crispEdges;
+    }
+
+    .xaxis path, .yaxis path {
+      stroke: white;
+      stroke-width: 3px;
+      shape-rendering: crispEdges;
+    }
+
+    .dot {
+      stroke: black;
+      stroke-opacity: 0.5;
+      fill: white;
+      fill-opacity: 0.8;
+    }
+
+    .annotation-note-title {
+      font-size: 16px;
+    }
+
+    .family text {
+      font-size: 26px;
+      fill: white;
+      text-anchor: middle;
+      vertical-align: middle;
+    }
+
+    .dashedline {
+      stroke: white;
+      stroke-width: 2px;
+      stroke-opacity: 0.5;
+
+    }
+
+    .year {
+      fill: #ffffff;
+      font-size: 260px;
+    }
+  </style>
+  <script src="d3.v4.min.js"></script>
+  <script src="d3-annotation.min.js"></script>  
+</head>
+
+<body>
+  <div id="viz" class="svg-container"></div>
+</body>
+
+<script>
+
+var margin = {top: 20, right: 30, bottom: 50, left: 120},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+var year = 1989;
+
+var format = d3.format(" d");
+
+color = function(d) {
+  if (d.radius > 6) {
+    return "#f1c40f"
+  } else if (d.radius > 2) {
+    return "#2ecc71"
+  } else{
+   return "#3498db" 
+  }
+ }
+
+// add the graph canvas to the body of the webpage
+var svg = d3.select("body")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+// create a clipping region to stop planets from going across axes
+svg.append("defs").append("clipPath")
+    .attr("id", "clip")
+    .append("rect")
+    .attr("x", 50)
+    .attr("width", width - 50)
+    .attr("height", height);
+
+  svg.selectAll(".year")
+    .data([year])
+    .enter()
+    .append("text")
+      .attr("x", width/2)
+      .attr("y", 310)
+      .attr("text-anchor", "middle")
+      .text(year)
+      .classed("year", true)
+      .attr("opacity", 0);
+
+var data;
+
+d3.csv("planets_to_plot.csv", function(error, dataset) {
+
+  data = dataset.filter(function(d){
+      if(isNaN(d.new_rade) || isNaN(d.new_insol) || isNaN(d.pl_orbper) || isNaN(d.fpl_smax)){
+          return false;
+      }
+      d.radius = +d.new_rade;
+      d.insolation = +d.new_insol;
+      d.period = +d.pl_orbper;
+      d.distance = +d.fpl_smax
+      return true;
+    });
+  
+    periodScale = d3.scaleLog().range([0, width]).domain([0.3, 14000])
+    periodMap = function(d) { return periodScale(d.period);}
+    periodTicks = [1, 14, 365, 10000];
+    periodLabels = ["1 day", "14 days", "365 days", "10 000 days"];
+
+    distanceScale = d3.scaleLog().range([0, width]).domain([0.01, 10])
+    distanceMap = function(d) { return distanceScale(d.distance);}
+    distanceTicks = [0.01, 0.1, 1, 10];
+    distanceLabels = ["0.01 AU", "0.1 AU", "1 AU", "10 AU"];
+
+    insolationScale = d3.scaleLog().range([0, width]).domain([10000, 0.01])
+    insolationMap = function(d) { return insolationScale(d.insolation);}
+    insolationTicks = [10000, 100, 1, 0.01];
+    insolationLabels = ["10 000x Earth", "100x Earth", "1x Earth", "0.01x"];
+
+    radiusScale = d3.scaleLog().range([height, 0]).domain([0.3, 33])
+    radiusMap = function(d) { return radiusScale(d.radius);}
+    radiusTicks = [1, 3.9-0.4, 11+0.8];
+    radiusLabels = ["Earth", "Neptune", "Jupiter"]
+
+    xAxis = d3.axisBottom()
+                .scale(insolationScale)
+                .tickValues(insolationTicks)
+                .tickFormat( function(d, idx) { return insolationLabels[idx]; })
+                .tickSize(15)
+                .tickSizeOuter(0)
+                
+    yAxis = d3.axisLeft()
+                .scale(radiusScale)
+                .tickValues(radiusTicks)
+                .tickFormat( function(d, idx) { return radiusLabels[idx]; })
+                .tickSize(15)
+                .tickSizeOuter(0)
+  
+      svg.selectAll(".dot")
+        .data(data)
+      .enter()
+        .append("circle")
+        .attr("clip-path", "url(#clip)")
+        .attr("class", function(d) { return "dot year" + d.pl_disc; })
+        .attr("r", function(d) { return 2 + d.radius; })
+        .attr("cx", insolationMap)
+        .attr("cy", radiusMap)
+        .transition()
+        .attr("opacity", 0)
+        .style("fill", color) 
+
+});
+
+
+function filter_year(year){
+  var filtered_data = data.filter(function(d) {
+    return d.pl_disc <= year
+  })
+  return filtered_data;
+}
+
+function draw_y() {
+    svg.append("g").transition()
+      .attr("class", "yaxis")
+      .attr("id", "yaxis")
+      .attr("transform", "translate(-10, 0)")
+      .call(yAxis)
+
+  // Axis labels
+  svg.append("text")
+      .attr("transform", "rotate(-90)")
+      .transition()
+      .attr("y", -5)
+      .attr("x", 0)
+      .attr("dy", "1em")
+      .attr("class", "label")
+      .style("text-anchor", "end")
+      .text("Planet size"); 
+}
+
+function draw_x() {     
+      svg.append("g").transition()
+      .attr("class", "xaxis")
+      .attr("id", "xaxis")
+      .attr("transform", "translate(0, " + (height + 10) + ")")
+      .call(xAxis)
+
+    // Axis labels
+    svg.append("text")
+        .transition()
+        .attr("y", height - 5)
+        .attr("x", width)
+        .attr("class", "label")
+        .attr("id", "xlabel")
+        .style("text-anchor", "end")
+        .text("Star light received")
+}
+
+
+function show_period() {
+  svg.selectAll("circle")
+        .transition()
+        .duration(1000)
+        .attr("cx", periodMap)
+        .attr("cy", radiusMap)
+
+  xAxis.scale(periodScale)
+      .tickValues(periodTicks)
+      .tickFormat( function(d, idx) { return periodLabels[idx]; });
+  svg.select("#xaxis").transition().call(xAxis)
+  
+  yAxis.scale(radiusScale)
+      .tickValues(radiusTicks)
+      .tickFormat( function(d, idx) { return radiusLabels[idx]; });
+  svg.select("#yaxis").transition().call(yAxis)
+
+  svg.select("#xlabel").transition().text("Orbital period")
+}
+
+
+function show_distance() {
+  svg.selectAll("circle")
+        .transition()
+        .duration(1000)
+        .attr("cx", distanceMap)
+        .attr("cy", radiusMap)
+
+  xAxis.scale(distanceScale)
+      .tickValues(distanceTicks)
+      .tickFormat( function(d, idx) { return distanceLabels[idx]; });
+  svg.select("#xaxis").transition().call(xAxis)
+  svg.select("#xlabel").transition().text("Distance from star")
+}
+
+
+function show_insolation() {
+  svg.selectAll("circle")
+        .transition()
+        .duration(1000)
+        .attr("cx", insolationMap)
+        .attr("cy", radiusMap)
+
+  xAxis.scale(insolationScale)
+      .tickValues(insolationTicks)
+      .tickFormat( function(d, idx) { return insolationLabels[idx]; });
+  svg.select("#xaxis").transition().call(xAxis)
+  svg.select("#xlabel").transition().text("Star light received")
+}
+
+
+function zoom() {
+  insTicksZoom = [100, 1, 0.01];
+  insLabelsZoom = ["100x", "1x Earth", "0.01x"];
+  insScaleZoom = d3.scaleLog().range([0, width]).domain([100, 0.01])
+  insMapZoom = function(d) { return insScaleZoom(d.insolation);}
+
+  xAxis.scale(insScaleZoom)
+      .tickValues(insTicksZoom)
+      .tickFormat( function(d, idx) { return insLabelsZoom[idx]; }); 
+  
+  radTicksZoom = [0.5, 1, 2];
+  radLabelsZoom = ["0.5x", "1x Earth", "2x"];
+  radScaleZoom = d3.scaleLog().range([height, 0]).domain([0.47, 2.])
+  radMapZoom = function(d) { return radScaleZoom(d.radius);}
+
+  yAxis.scale(radScaleZoom)
+      .tickValues(radTicksZoom)
+      .tickFormat( function(d, idx) { return radLabelsZoom[idx]; }); 
+
+  svg.select("#xaxis").transition().call(xAxis)
+  svg.select("#yaxis").transition().call(yAxis)
+
+  svg.selectAll(".dot")
+      .transition()
+      .duration(2000)
+      .attr("cx", insMapZoom)
+      .attr("cy", radMapZoom)
+
+}
+
+
+function annotate_hz() {
+  const annotations = [
+    {
+      note: {
+        label: "2017",
+        title: "TRAPPIST-1e"
+      },
+      color: ["white"],
+      x: insScaleZoom(0.6598),
+      y: radScaleZoom(0.918),
+      dy: 30,
+      dx: 30
+    },
+    {
+      note: {
+        label: "2019",
+        title: "Teegarden b"
+      },
+      color: ["white"],
+      x: insScaleZoom(1.149),
+      y: radScaleZoom(1.0213),
+      dy: 30,
+      dx: -30
+    },
+    {
+      note: {
+        label: "2016",
+        title: "Proxima Cen B"
+      },
+      color: ["white"],
+      x: insScaleZoom(0.6584),
+      y: radScaleZoom(1.0962),
+      dy: -30,
+      dx: 30
+    }
+  ]
+
+  // Add annotation to the chart
+  const makeAnnotations = d3.annotation()
+    .annotations(annotations)
+  svg.append("g")
+    .call(makeAnnotations)
+}
+
+function show_family(x, y, boxwidth, boxheight, text) {
+  svg.append("g")
+      .attr("class", "family")
+      .append("rect")
+      .attr("x", x - boxwidth/2)
+      .attr("y", y - boxheight/2)
+      .attr("width", boxwidth)
+      .attr("height", boxheight)
+      .style("opacity", 0.7)
+    
+    svg.append("g")
+      .attr("class", "family")
+      .append("text")
+      .text(text)
+      .attr("x", x)
+      .attr("y", y + 10)
+      .style("fill", "white")
+}
+
+function hide_families() {
+  svg.selectAll(".family").transition().duration(10).remove();
+}
+
+
+var speed = 70;
+
+function show_year(year) {
+  size = svg.selectAll(".year" + year).size()
+  svg.selectAll(".year" + year)
+        .transition()
+        //.delay((d, i) => i * (speed/size))
+        .duration(speed)
+        .attr("opacity", 1)
+
+        
+        svg.selectAll(".year")
+       .data([year])
+       .transition()
+       .delay(speed)
+       .duration(speed)
+       .text(year)
+}
+
+function show_until(until) {
+    var timer = d3.interval(function(duration) {
+            show_year(year);
+            if (year == until) timer.stop();
+            year += 1;
+         }, speed);
+    /*
+    svg.selectAll(".year")
+       .data([year])
+       .transition()
+       .ease(d3.easeLinear)
+       .delay(speed)
+       .duration(1.2*speed * (until-year))
+       .tween("text", function(bin) {
+          var that = d3.select(this),
+              i = d3.interpolateNumber(that.text(), until);
+          return function(t) { that.text(format(i(t))); };
+        })*/
+}
+
+
+build = 0;
+function next() {
+  if (build == 0) {
+    draw_y();
+  } else if (build == 1) {
+    draw_x()
+  } else if (build == 2) {
+    show_insolation()
+    // reset
+    svg.selectAll(".dot").transition().attr("opacity", 0);
+    svg.selectAll(".annotations").remove();
+    svg.selectAll(".dashedline").remove();
+
+    boxwidth = 200
+    boxheight = 30
+    show_family(periodScale(2), radiusScale(1), boxwidth, boxheight, "Small & hot")
+    show_family(periodScale(2000), radiusScale(12), boxwidth, boxheight, "Large & cold")
+  } else if (build == 3) {
+    hide_families()
+    show_until(1989)
+  } else if (build == 4) {
+    svg.selectAll(".year").transition().duration(500).attr("opacity", 0.5)
+  } else if (build == 5) {
+    show_until(1999)
+  } else if (build == 6) {
+    show_until(2009)
+  } else if (build == 7) {
+    show_until(2019)
+  } else if (build == 8) {
+    svg.selectAll(".year").transition().duration(500).attr("opacity", 0)
+  } else if (build == 9) {
+    boxwidth = 200
+    boxheight = 60
+    show_family(periodScale(3), radiusScale(12), boxwidth, boxheight, "Hot Jupiters")
+    show_family(periodScale(2000), radiusScale(12), boxwidth, boxheight, "Cold Gas Giants")
+    show_family(periodScale(100), radiusScale(1), boxwidth, boxheight, "Rocky Planets")
+    show_family(periodScale(2), radiusScale(1), boxwidth, boxheight, "Lava Worlds")
+    show_family(periodScale(14), radiusScale(3.5), boxwidth, boxheight, "Ice Giants")
+  } else if (build == 10) {
+    hide_families()
+  } else if (build == 11) {
+    zoom()
+  } else if (build == 12) {
+    svg.append('line')
+      .attr('class', 'dashedline')
+      .attr('stroke-dasharray', "8 6")
+      .attr('x1', 0)
+      .attr('y1', radScaleZoom(1))
+      .attr('x2', width)
+      .attr('y2', radScaleZoom(1))
+
+     svg.append('line')
+      .attr('class', 'dashedline')
+      .attr('stroke-dasharray', "8 6")
+      .attr('x1', insScaleZoom(1))
+      .attr('y1', 0)
+      .attr('x2', insScaleZoom(1))
+      .attr('y2', height)
+  } else if (build == 13) {
+    annotate_hz()
+    //build = 1;
+    //year = 1989;
+  }
+  build += 1;
+}
+
+d3.select('body').on("keypress", next)
+d3.select('body').on("click", next)
+</script>
