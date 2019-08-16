@@ -19,6 +19,7 @@
       max-width:100%;
       max-height:100%;
     }
+
     .svg-content {
         display: inline-block;
         position: absolute;
@@ -169,7 +170,7 @@ d3.csv("planets_to_plot.csv", function(error, dataset) {
 
     radiusScale = d3.scaleLog().range([height, 0]).domain([0.3, 33])
     radiusMap = function(d) { return radiusScale(d.radius);}
-    radiusTicks = [1, 3.9-0.4, 11+0.8];
+    radiusTicks = [1, 3.9-0.2, 11+0.4];
     radiusLabels = ["Earth", "Neptune", "Jupiter"]
 
     xAxis = d3.axisBottom()
@@ -470,11 +471,11 @@ function next() {
   } else if (build == 9) {
     boxwidth = 200
     boxheight = 60
-    show_family(periodScale(3), radiusScale(12), boxwidth, boxheight, "Hot Jupiters")
-    show_family(periodScale(2000), radiusScale(12), boxwidth, boxheight, "Cold Gas Giants")
-    show_family(periodScale(100), radiusScale(1), boxwidth, boxheight, "Rocky Planets")
-    show_family(periodScale(2), radiusScale(1), boxwidth, boxheight, "Lava Worlds")
-    show_family(periodScale(14), radiusScale(3.5), boxwidth, boxheight, "Ice Giants")
+    show_family(periodScale(3), radiusScale(14), boxwidth, boxheight, "Hot Jupiters")
+    show_family(periodScale(2000), radiusScale(14), boxwidth, boxheight, "Cold Gas Giants")
+    show_family(periodScale(110), radiusScale(1.2), boxwidth, boxheight, "Rocky Planets")
+    show_family(periodScale(2.2), radiusScale(1.2), boxwidth, boxheight, "Lava Worlds")
+    show_family(periodScale(30), radiusScale(3.5), boxwidth, boxheight, "Ice Giants")
   } else if (build == 10) {
     hide_families()
   } else if (build == 11) {
