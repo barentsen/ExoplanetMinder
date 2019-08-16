@@ -457,18 +457,19 @@ function next() {
     show_family(periodScale(2000), radiusScale(12), boxwidth, boxheight, "Large & cold")
   } else if (build == 3) {
     hide_families()
-    show_until(1989)
   } else if (build == 4) {
     svg.selectAll(".year").transition().duration(500).attr("opacity", 0.5)
   } else if (build == 5) {
-    show_until(1999)
+    show_until(1989)
   } else if (build == 6) {
-    show_until(2009)
+    show_until(1999)
   } else if (build == 7) {
-    show_until(2019)
+    show_until(2009)
   } else if (build == 8) {
-    svg.selectAll(".year").transition().duration(500).attr("opacity", 0)
+    show_until(2019)
   } else if (build == 9) {
+    svg.selectAll(".year").transition().duration(500).attr("opacity", 0)
+  } else if (build == 10) {
     boxwidth = 200
     boxheight = 60
     show_family(periodScale(3), radiusScale(14), boxwidth, boxheight, "Hot Jupiters")
@@ -476,11 +477,11 @@ function next() {
     show_family(periodScale(110), radiusScale(1.2), boxwidth, boxheight, "Rocky Planets")
     show_family(periodScale(2.2), radiusScale(1.2), boxwidth, boxheight, "Lava Worlds")
     show_family(periodScale(30), radiusScale(3.5), boxwidth, boxheight, "Ice Giants")
-  } else if (build == 10) {
-    hide_families()
   } else if (build == 11) {
-    zoom()
+    hide_families()
   } else if (build == 12) {
+    zoom()
+  } else if (build == 13) {
     svg.append('line')
       .attr('class', 'dashedline')
       .attr('stroke-dasharray', "8 6")
@@ -496,7 +497,7 @@ function next() {
       .attr('y1', 0)
       .attr('x2', insScaleZoom(1))
       .attr('y2', height)
-  } else if (build == 13) {
+  } else if (build == 14) {
     annotate_hz()
     //build = 1;
     //year = 1989;
