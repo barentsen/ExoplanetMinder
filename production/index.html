@@ -149,7 +149,7 @@ svg.append("defs").append("clipPath")
 
 var data;
 
-d3.csv("planets_to_plot.csv", function(error, dataset) {
+d3.csv("planets_to_plot.min.csv", function(error, dataset) {
 
   data = dataset.filter(function(d){
       if(isNaN(d.new_rade) || isNaN(d.new_insol) || isNaN(d.pl_orbper) || isNaN(d.fpl_smax)){
