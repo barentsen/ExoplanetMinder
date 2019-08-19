@@ -387,10 +387,8 @@ function annotate_hz() {
   ]
 
   // Add annotation to the chart
-  const makeAnnotations = d3.annotation()
-    .annotations(annotations)
-  svg.append("g")
-    .call(makeAnnotations)
+  const makeAnnotations = d3.annotation().annotations(annotations)
+  svg.append("g").call(makeAnnotations)
 }
 
 function show_family(x, y, boxwidth, boxheight, text) {
@@ -417,7 +415,7 @@ function hide_families() {
 }
 
 
-var speed = 70;
+var speed = 200;
 
 function show_year(year) {
   size = svg.selectAll(".year" + year).size()
@@ -426,7 +424,7 @@ function show_year(year) {
 	      .on("mousemove", function(d){return tooltip.style("top", (event.pageY-10)+"px").style("left",(event.pageX+10)+"px").text(d.name);})
 	      .on("mouseout", function(d){return tooltip.style("visibility", "hidden");})
         .transition()
-        //.delay((d, i) => i * (speed/size))
+        .delay((d, i) => i * (speed/size))
         .duration(speed)
         .style("display", "inline")
       
@@ -453,7 +451,7 @@ function hide_year(year) {
 function show_until(until) {
     var timer = d3.interval(function(duration) {
             show_year(year);
-            if (year == until) timer.stop();
+            if ((year == until) || (year > 2019)) timer.stop();
             year += 1;
          }, speed);
 }
