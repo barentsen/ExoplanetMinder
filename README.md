@@ -17,4 +17,9 @@ See https://github.com/barentsen/ExoplanetMinder/tree/master/production
 ### Video
 
 Click here:
+
 [![Video](https://img.youtube.com/vi/r_Y7xf4rswM/0.jpg)](https://www.youtube.com/watch?v=r_Y7xf4rswM)
+
+### Credits
+
+This visualization depends on the data curated by [NASA's Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu/).
